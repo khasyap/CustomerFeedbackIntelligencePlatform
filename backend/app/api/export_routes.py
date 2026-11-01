@@ -3,7 +3,7 @@ import json
 import csv
 import io
 from fastapi import APIRouter, Depends, Query, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from backend.app.database import get_db
 from backend.app.models.entities import (
@@ -167,3 +167,64 @@ def export_reviews_csv(db: Session = Depends(get_db)):
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=reviews_export.csv"}
     )
+
+@router.get("/download/ground-truth-csv")
+def download_ground_truth_csv():
+    """Serves the ground_truth.csv file directly from disk without database dependency."""
+    csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data/ground_truth/ground_truth.csv"))
+    if not os.path.exists(csv_path):
+        return JSONResponse(status_code=404, content={"detail": "ground_truth.csv not found on disk"})
+    return FileResponse(
+        path=csv_path,
+        media_type="text/csv",
+        filename="ground_truth.csv"
+    )
+
+@router.get("/download/ground-truth-json")
+def download_ground_truth_json():
+    """Serves the ground_truth.json file directly from disk without database dependency."""
+    json_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data/ground_truth/ground_truth.json"))
+    if not os.path.exists(json_path):
+        return JSONResponse(status_code=404, content={"detail": "ground_truth.json not found on disk"})
+    return FileResponse(
+        path=json_path,
+        media_type="application/json",
+        filename="ground_truth.json"
+    )
+
+@router.get("/download/seed-sql")
+def download_seed_sql():
+    """Serves the seed.sql backup dump directly from disk without database dependency."""
+    sql_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../database/seed/seed.sql"))
+    if not os.path.exists(sql_path):
+        return JSONResponse(status_code=404, content={"detail": "seed.sql not found on disk"})
+    return FileResponse(
+        path=sql_path,
+        media_type="application/sql",
+        filename="seed.sql"
+    )
+
+@router.get("/offline-preview")
+def get_offline_ground_truth_preview(limit: int = 25):
+    """Parses ground_truth.csv directly from disk to view feedback records without database access."""
+    csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data/ground_truth/ground_truth.csv"))
+    if not os.path.exists(csv_path):
+        return {"total_records": 0, "sample": [], "source": "FILE_NOT_FOUND"}
+
+    rows = []
+    total = 0
+    with open(csv_path, mode="r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            total += 1
+            if len(rows) < limit:
+                rows.append(row)
+
+    return {
+        "status": "SUCCESS",
+        "total_records": total,
+        "source": "OFFLINE_DISK_FILE",
+        "file_path": "data/ground_truth/ground_truth.csv",
+        "sample": rows
+    }
+

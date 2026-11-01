@@ -136,5 +136,6 @@ export const api = {
   generateData: (mode: 'starter' | 'full') =>
     fetchJson<any>(`/data/generate?mode=${mode}`, { method: 'POST' }),
   getReproducibility: () => fetchJson<any>('/data/reproducibility'),
+  getOfflinePreview: (limit: number = 25) => fetchJson<any>(`/data/offline-preview?limit=${limit}`),
 };
 
