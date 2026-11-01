@@ -263,3 +263,4 @@ erDiagram
    - `ix_survey_resp_date_prod`: `(response_date, product_id)` — Optimizes survey timeline queries.
    - `ix_dqi_status_sev`: `(resolution_status, severity)` — Speeds up data quality dashboard filters.
    - `ix_state_change_entity`: `(entity_type, entity_id)` — Enables sub-millisecond retrieval of action and feedback audit history.
+

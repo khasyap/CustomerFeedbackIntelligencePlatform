@@ -382,3 +382,4 @@ class SentimentShiftAlert(Base):
     severity = Column(String(50), nullable=False, default="HIGH") # HIGH, CRITICAL
     summary = Column(Text, nullable=False)
     detected_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+

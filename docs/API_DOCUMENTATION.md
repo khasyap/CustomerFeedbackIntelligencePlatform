@@ -242,3 +242,4 @@ Retrieves benchmark metrics across Sentiment and Theme classifiers.
 
 ### `POST /api/evaluation/run`
 Runs evaluation against the holdout `TEST` split, calculating precision, recall, macro F1, micro F1, Hamming loss, and confusion matrix.
+

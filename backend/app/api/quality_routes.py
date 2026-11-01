@@ -53,3 +53,4 @@ def update_issue_status(
     db.commit()
     db.refresh(issue)
     return issue
+

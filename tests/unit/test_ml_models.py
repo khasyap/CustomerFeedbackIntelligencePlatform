@@ -42,3 +42,4 @@ def test_theme_classifier_multi_label():
     assert "THEME-000007" in t_ids or "THEME-000004" in t_ids
     assert len(themes) >= 1
     assert "confidence" in themes[0]
+

@@ -122,3 +122,4 @@ Evaluated on 1,000 holdout records from the strictly isolated `TEST` split (seed
 
 1. **Idiomatic Subtlety**: Extremely subtle sarcasm without overt contrast words may receive lower confidence scores, safely triggering human review.
 2. **Transformer Integration**: A lightweight DistilBERT / RoBERTa encoder can be enabled in environments with GPU availability for deeper contextual embeddings.
+

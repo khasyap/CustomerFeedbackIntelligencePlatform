@@ -317,3 +317,4 @@ Time-series anomaly alerts triggered upon significant spikes in customer dissati
 | `severity` | String(50) | Yes | No | No | `HIGH`, `CRITICAL` | `HIGH` | No | Alert severity | Risk level of dissatisfaction surge |
 | `summary` | Text | Yes | No | No | Descriptive diagnostic summary | None | No | Non-empty text | Alert narrative and explanation |
 | `detected_at` | DateTime | Yes | No | No | ISO 8601 DateTime | `utcnow()` | No | Valid timestamp | Alert detection timestamp |
+

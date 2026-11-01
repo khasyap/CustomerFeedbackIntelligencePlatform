@@ -25,3 +25,4 @@ class Settings(BaseModel):
     WEIGHT_CUSTOMER_IMPACT: float = 0.10
 
 settings = Settings()
+

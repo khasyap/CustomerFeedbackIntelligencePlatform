@@ -1185,3 +1185,4 @@ class SyntheticDataGenerator:
             encoded = json.dumps(data, sort_keys=True, default=str).encode("utf-8")
             hashes[name] = hashlib.sha256(encoded).hexdigest()
         return hashes
+

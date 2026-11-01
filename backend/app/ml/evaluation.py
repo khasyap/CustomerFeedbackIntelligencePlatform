@@ -151,3 +151,4 @@ class ModelEvaluator:
                 "throughput_records_per_second": round(n_samples / max(0.001, elapsed), 1)
             }
         }
+

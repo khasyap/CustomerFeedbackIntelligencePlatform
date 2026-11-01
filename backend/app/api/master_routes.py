@@ -54,3 +54,4 @@ def get_themes(
     if is_active is not None:
         query = query.filter(Theme.is_active == is_active)
     return query.all()
+

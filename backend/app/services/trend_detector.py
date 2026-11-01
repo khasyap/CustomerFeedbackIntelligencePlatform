@@ -170,3 +170,4 @@ class TrendDetector:
             "volume": total,
             "negative_rate": neg_count / total
         }
+

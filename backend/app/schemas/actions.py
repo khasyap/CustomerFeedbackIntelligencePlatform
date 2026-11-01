@@ -68,3 +68,4 @@ class ActionHistoryItem(BaseModel):
 
     class Config:
         from_attributes = True
+

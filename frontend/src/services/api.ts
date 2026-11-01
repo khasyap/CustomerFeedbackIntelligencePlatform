@@ -137,3 +137,4 @@ export const api = {
     fetchJson<any>(`/data/generate?mode=${mode}`, { method: 'POST' }),
   getReproducibility: () => fetchJson<any>('/data/reproducibility'),
 };
+

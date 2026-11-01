@@ -59,3 +59,4 @@ def test_action_lifecycle_transitions():
         db.commit()
     finally:
         db.close()
+

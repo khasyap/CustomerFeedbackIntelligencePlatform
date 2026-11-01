@@ -214,3 +214,4 @@ def get_action_history(action_id: str, db: Session = Depends(get_db)):
         StateChangeEvent.entity_id == action_id
     ).order_by(StateChangeEvent.change_timestamp.desc()).all()
     return events
+

@@ -96,3 +96,4 @@ class BatchInferenceRequest(BaseModel):
     feedback_ids: Optional[List[str]] = None
     feedback_type: Optional[str] = None # SURVEY_RESPONSE, REVIEW, SUPPORT_MESSAGE, or ALL
     limit: Optional[int] = 1000
+

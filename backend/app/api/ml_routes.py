@@ -211,3 +211,4 @@ def trigger_processing_run(
 def get_processing_history(db: Session = Depends(get_db)):
     """Fetches execution logs and performance metrics for all processing runs."""
     return db.query(ProcessingRun).order_by(ProcessingRun.start_time.desc()).all()
+

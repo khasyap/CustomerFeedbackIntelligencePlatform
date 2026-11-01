@@ -263,3 +263,4 @@ class ValidationService:
         db.add(iss)
         issues_detected.append(iss)
         existing_keys.add((source_id, issue_type))
+

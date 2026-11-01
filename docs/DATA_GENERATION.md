@@ -89,3 +89,4 @@ To test the platform's time-series anomaly detection engine, the generator intro
 python scripts/verify_reproducibility.py
 ```
 Outputs SHA-256 checksums matching the verified reference run in `docs/REPRODUCIBILITY_REPORT.md`.
+

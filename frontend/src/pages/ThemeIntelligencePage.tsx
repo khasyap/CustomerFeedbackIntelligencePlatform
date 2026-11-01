@@ -149,3 +149,4 @@ export const ThemeIntelligencePage: React.FC = () => {
     </div>
   );
 };
+

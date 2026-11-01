@@ -81,3 +81,4 @@ class AuditService:
         )
         db.add(event)
         db.commit()
+

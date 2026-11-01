@@ -207,3 +207,4 @@ export interface ThemeItem {
   theme_name: string;
   default_severity: string;
 }
+
