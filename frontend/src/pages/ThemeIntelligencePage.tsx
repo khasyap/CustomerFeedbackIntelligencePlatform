@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tag, Sparkles, AlertOctagon, TrendingDown, Layers, Search, RefreshCw } from 'lucide-react';
+import { Tag, Sparkles, Search, RefreshCw } from 'lucide-react';
 import { api } from '../services/api';
 import { ThemeMetricItem } from '../types';
 

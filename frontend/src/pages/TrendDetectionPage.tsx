@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  TrendingUp, TrendingDown, AlertTriangle, AlertOctagon,
-  Calendar, CheckCircle2, RefreshCw, Sparkles, Filter
-} from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
@@ -75,9 +72,10 @@ export const TrendDetectionPage: React.FC = () => {
 
           <button
             onClick={fetchData}
-            className="rounded-lg bg-slate-800 p-2 text-slate-300 hover:bg-slate-700 hover:text-white"
+            disabled={loading}
+            className="rounded-lg bg-slate-800 p-2 text-slate-300 hover:bg-slate-700 hover:text-white disabled:opacity-50"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
