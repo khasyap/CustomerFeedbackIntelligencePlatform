@@ -69,8 +69,8 @@
       }
     },
     "operational_metrics": {
-      "total_processing_seconds": 1.0685,
-      "throughput_records_per_second": 935.9,
+      "total_processing_seconds": 0.5428,
+      "throughput_records_per_second": 1842.3,
       "average_confidence": 0.8947,
       "human_review_rate": 0.003
     }
@@ -85,8 +85,8 @@
     "f1_micro": 0.4693,
     "hamming_loss": 0.1117,
     "operational_metrics": {
-      "total_processing_seconds": 1.2475,
-      "throughput_records_per_second": 801.6
+      "total_processing_seconds": 0.4257,
+      "throughput_records_per_second": 2349.1
     }
   }
 }

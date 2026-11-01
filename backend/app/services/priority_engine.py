@@ -129,8 +129,11 @@ SEVERITY_SCORES = {
 class PriorityEngine:
     """Calculates evidence-based service improvement priorities using weighted formula."""
 
-    @staticmethod
-    def calculate_priorities(db: Session) -> List[Dict[str, Any]]:
+    _CACHE = None
+    _CACHE_TIME = None
+
+    @classmethod
+    def calculate_priorities(cls, db: Session, force_refresh: bool = False) -> List[Dict[str, Any]]:
         """
         Calculates priority score for each Theme-Product pair.
         Priority Score =
@@ -140,6 +143,10 @@ class PriorityEngine:
           + 10% Recent Growth Rate
           + 10% Customer Impact
         """
+        now = datetime.utcnow()
+        if not force_refresh and cls._CACHE and cls._CACHE_TIME and (now - cls._CACHE_TIME).total_seconds() < 60:
+            return cls._CACHE
+
         themes = db.query(Theme).filter(Theme.is_active == True).all()
         products = db.query(Product).filter(Product.is_active == True).all()
         
@@ -150,7 +157,6 @@ class PriorityEngine:
         }
 
         # Calculate max volume to normalize
-        # We can aggregate feedback counts
         all_feedback_themes = db.query(
             FeedbackTheme.theme_id,
             func.count(FeedbackTheme.id).label("count")
@@ -160,6 +166,17 @@ class PriorityEngine:
 
         priorities = []
 
+        # Pre-gather all feedback themes by theme_id once
+        theme_fb_map: Dict[str, List[str]] = {}
+        for ft in db.query(FeedbackTheme.theme_id, FeedbackTheme.feedback_id).all():
+            theme_fb_map.setdefault(ft[0], []).append(ft[1])
+
+        # Pre-gather feedback sentiments once
+        sentiment_lookup = {
+            s.feedback_id: (s.predicted_sentiment, s.processing_timestamp)
+            for s in db.query(FeedbackSentiment.feedback_id, FeedbackSentiment.predicted_sentiment, FeedbackSentiment.processing_timestamp).all()
+        }
+
         for theme in themes:
             playbook = ACTION_PLAYBOOK.get(theme.theme_id, {
                 "problem": f"Customer friction observed regarding {theme.theme_name}.",
@@ -168,19 +185,11 @@ class PriorityEngine:
                 "impact": "Improves overall customer satisfaction."
             })
             severity_score = SEVERITY_SCORES.get(theme.default_severity, 50.0)
+            fb_ids = theme_fb_map.get(theme.theme_id, [])
 
             # Analyze for top problematic products
             for prod in products:
-                # Query feedback themes for this theme and product
-                # We can join with reviews and surveys
-                fb_theme_rows = db.query(FeedbackTheme).filter(
-                    FeedbackTheme.theme_id == theme.theme_id
-                ).all()
-
-                # Get linked feedback IDs
-                fb_ids = [ft.feedback_id for ft in fb_theme_rows]
-                
-                # If no FeedbackTheme rows yet, gather from Review/Survey/Support ground truth
+                # If no FeedbackTheme rows yet, gather from Review/Survey ground truth
                 if not fb_ids:
                     matching_revs = db.query(Review.review_id, Review.ground_truth_sentiment).filter(
                         Review.product_id == prod.product_id,
@@ -194,27 +203,23 @@ class PriorityEngine:
                     vol = len(matching_revs) + len(matching_survs)
                     if vol == 0:
                         continue
-                    fb_ids = [r[0] for r in matching_revs] + [s[0] for s in matching_survs]
+                    curr_fb_ids = [r[0] for r in matching_revs] + [s[0] for s in matching_survs]
                     neg_count = sum(1 for r in matching_revs if r[1] in ["NEGATIVE", "MIXED"]) + sum(1 for s in matching_survs if s[1] in ["NEGATIVE", "MIXED"])
                     neg_rate = neg_count / max(1, vol)
                     growth_rate = 0.15
                 else:
-                    # Get sentiments for these feedbacks
-                    sentiments = db.query(FeedbackSentiment).filter(
-                        FeedbackSentiment.feedback_id.in_(fb_ids)
-                    ).all()
-
-                    if not sentiments:
+                    curr_fb_ids = fb_ids
+                    matched_sents = [sentiment_lookup[fid] for fid in curr_fb_ids if fid in sentiment_lookup]
+                    if not matched_sents:
                         continue
 
-                    vol = len(sentiments)
-                    neg_count = sum(1 for s in sentiments if s.predicted_sentiment in ["NEGATIVE", "MIXED"])
+                    vol = len(matched_sents)
+                    neg_count = sum(1 for s in matched_sents if s[0] in ["NEGATIVE", "MIXED"])
                     neg_rate = neg_count / max(1, vol)
 
                     # Growth rate: compare last 30 days vs prior 30 days
-                    now = datetime.utcnow()
-                    recent_count = sum(1 for s in sentiments if (now - s.processing_timestamp).days <= 30)
-                    prior_count = sum(1 for s in sentiments if 30 < (now - s.processing_timestamp).days <= 60)
+                    recent_count = sum(1 for s in matched_sents if (now - s[1]).days <= 30)
+                    prior_count = sum(1 for s in matched_sents if 30 < (now - s[1]).days <= 60)
                     if prior_count > 0:
                         growth_rate = (recent_count - prior_count) / prior_count
                     else:
@@ -273,6 +278,8 @@ class PriorityEngine:
         for idx, p in enumerate(priorities, start=1):
             p["rank"] = idx
 
+        cls._CACHE = priorities
+        cls._CACHE_TIME = datetime.utcnow()
         return priorities
 
     @staticmethod

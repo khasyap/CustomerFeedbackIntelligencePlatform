@@ -42,22 +42,32 @@ def get_unified_feedback(
     for dqi in dqi_records:
         dqi_by_source.setdefault(dqi.source_record_id, []).append(dqi.issue_type)
 
-    # Sentiment lookup
+    # Lightweight sentiment tuple lookup (feedback_id, predicted_sentiment, confidence_score, explanation, review_status)
     sentiments = {
-        s.feedback_id: s
-        for s in db.query(FeedbackSentiment).all()
+        s[0]: s
+        for s in db.query(
+            FeedbackSentiment.feedback_id,
+            FeedbackSentiment.predicted_sentiment,
+            FeedbackSentiment.confidence_score,
+            FeedbackSentiment.explanation,
+            FeedbackSentiment.review_status
+        ).all()
     }
 
-    # Theme lookup
-    fb_themes: Dict[str, List[FeedbackTheme]] = {}
-    for ft in db.query(FeedbackTheme).all():
-        fb_themes.setdefault(ft.feedback_id, []).append(ft)
+    # Lightweight theme tuple lookup (feedback_id, theme_id, confidence)
+    fb_themes: Dict[str, List[Any]] = {}
+    for ft in db.query(FeedbackTheme.feedback_id, FeedbackTheme.theme_id, FeedbackTheme.confidence).all():
+        fb_themes.setdefault(ft[0], []).append(ft)
 
     items: List[Dict[str, Any]] = []
 
     # 1. Reviews
     if not feedback_type or feedback_type == "REVIEW":
-        r_query = db.query(Review)
+        r_query = db.query(
+            Review.review_id, Review.customer_id, Review.product_id, Review.channel_id,
+            Review.title, Review.review_text, Review.rating, Review.review_date,
+            Review.ground_truth_sentiment, Review.ground_truth_theme_ids
+        )
         if product_id:
             r_query = r_query.filter(Review.product_id == product_id)
         if channel_id:
@@ -66,23 +76,27 @@ def get_unified_feedback(
             s_pat = f"%{search}%"
             r_query = r_query.filter(or_(Review.review_text.ilike(s_pat), Review.title.ilike(s_pat), Review.review_id.ilike(s_pat)))
         
-        for r in r_query.limit(1000).all():
+        for r in r_query.limit(400).all():
             items.append({
-                "feedback_id": r.review_id,
+                "feedback_id": r[0],
                 "feedback_type": "REVIEW",
-                "customer_id": r.customer_id,
-                "product_id": r.product_id,
-                "channel_id": r.channel_id,
-                "text": f"{r.title + ': ' if r.title else ''}{r.review_text}",
-                "rating": r.rating,
-                "date": r.review_date,
-                "ground_truth_sentiment": r.ground_truth_sentiment,
-                "ground_truth_themes": r.ground_truth_theme_ids
+                "customer_id": r[1],
+                "product_id": r[2],
+                "channel_id": r[3],
+                "text": f"{r[4] + ': ' if r[4] else ''}{r[5]}",
+                "rating": r[6],
+                "date": r[7],
+                "ground_truth_sentiment": r[8],
+                "ground_truth_themes": r[9]
             })
 
     # 2. Survey Responses
     if not feedback_type or feedback_type == "SURVEY_RESPONSE":
-        s_query = db.query(SurveyResponse)
+        s_query = db.query(
+            SurveyResponse.response_id, SurveyResponse.customer_id, SurveyResponse.product_id, SurveyResponse.channel_id,
+            SurveyResponse.response_text, SurveyResponse.rating, SurveyResponse.response_date,
+            SurveyResponse.ground_truth_sentiment, SurveyResponse.ground_truth_theme_ids
+        )
         if product_id:
             s_query = s_query.filter(SurveyResponse.product_id == product_id)
         if channel_id:
@@ -91,23 +105,27 @@ def get_unified_feedback(
             s_pat = f"%{search}%"
             s_query = s_query.filter(or_(SurveyResponse.response_text.ilike(s_pat), SurveyResponse.response_id.ilike(s_pat)))
 
-        for s in s_query.limit(1000).all():
+        for s in s_query.limit(400).all():
             items.append({
-                "feedback_id": s.response_id,
+                "feedback_id": s[0],
                 "feedback_type": "SURVEY_RESPONSE",
-                "customer_id": s.customer_id,
-                "product_id": s.product_id,
-                "channel_id": s.channel_id,
-                "text": s.response_text,
-                "rating": s.rating,
-                "date": s.response_date,
-                "ground_truth_sentiment": s.ground_truth_sentiment,
-                "ground_truth_themes": s.ground_truth_theme_ids
+                "customer_id": s[1],
+                "product_id": s[2],
+                "channel_id": s[3],
+                "text": s[4],
+                "rating": s[5],
+                "date": s[6],
+                "ground_truth_sentiment": s[7],
+                "ground_truth_themes": s[8]
             })
 
     # 3. Support Messages
     if not feedback_type or feedback_type == "SUPPORT_MESSAGE":
-        m_query = db.query(SupportMessage)
+        m_query = db.query(
+            SupportMessage.message_id, SupportMessage.customer_id, SupportMessage.product_id, SupportMessage.channel_id,
+            SupportMessage.message_text, SupportMessage.message_date,
+            SupportMessage.ground_truth_sentiment, SupportMessage.ground_truth_theme_ids
+        )
         if product_id:
             m_query = m_query.filter(SupportMessage.product_id == product_id)
         if channel_id:
@@ -116,18 +134,18 @@ def get_unified_feedback(
             s_pat = f"%{search}%"
             m_query = m_query.filter(or_(SupportMessage.message_text.ilike(s_pat), SupportMessage.message_id.ilike(s_pat)))
 
-        for m in m_query.limit(1000).all():
+        for m in m_query.limit(200).all():
             items.append({
-                "feedback_id": m.message_id,
+                "feedback_id": m[0],
                 "feedback_type": "SUPPORT_MESSAGE",
-                "customer_id": m.customer_id,
-                "product_id": m.product_id,
-                "channel_id": m.channel_id,
-                "text": m.message_text,
+                "customer_id": m[1],
+                "product_id": m[2],
+                "channel_id": m[3],
+                "text": m[4],
                 "rating": None,
-                "date": m.message_date,
-                "ground_truth_sentiment": m.ground_truth_sentiment,
-                "ground_truth_themes": m.ground_truth_theme_ids
+                "date": m[5],
+                "ground_truth_sentiment": m[6],
+                "ground_truth_themes": m[7]
             })
 
     # Enrich with predicted sentiment and themes
@@ -137,18 +155,18 @@ def get_unified_feedback(
         sent_obj = sentiments.get(fid)
         th_list = fb_themes.get(fid, [])
 
-        pred_sent = sent_obj.predicted_sentiment if sent_obj else it.get("ground_truth_sentiment", "NEUTRAL")
-        conf = sent_obj.confidence_score if sent_obj else 0.85
-        expl = sent_obj.explanation if sent_obj else "Direct inference"
-        rev_stat = sent_obj.review_status if sent_obj else "AUTO_CLASSIFIED"
+        pred_sent = sent_obj[1] if sent_obj else it.get("ground_truth_sentiment", "NEUTRAL")
+        conf = sent_obj[2] if sent_obj else 0.85
+        expl = sent_obj[3] if sent_obj else "Direct inference"
+        rev_stat = sent_obj[4] if sent_obj else "AUTO_CLASSIFIED"
 
-        th_names = [themes[t.theme_id].theme_name for t in th_list if t.theme_id in themes]
+        th_names = [themes[t[1]].theme_name for t in th_list if t[1] in themes]
         if not th_names and it.get("ground_truth_themes"):
             gt_id = it["ground_truth_themes"]
             if gt_id in themes:
                 th_names = [themes[gt_id].theme_name]
 
-        th_confs = [t.confidence for t in th_list]
+        th_confs = [t[2] for t in th_list]
 
         # Apply sentiment filter
         if sentiment and pred_sent != sentiment:
