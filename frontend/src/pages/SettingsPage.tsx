@@ -142,7 +142,7 @@ export const SettingsPage: React.FC = () => {
             Runtime Environment & Service Endpoints
           </h3>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
               <span className="text-[10px] text-slate-400 uppercase font-semibold">Random Seed</span>
               <p className="font-mono text-sm font-bold text-indigo-300 mt-0.5">20261022</p>

@@ -69,7 +69,7 @@ export const ModelEvaluationPage: React.FC = () => {
         <h3 className="text-sm font-bold text-indigo-300 mb-3 uppercase tracking-wider">
           Sentiment Classifier Benchmark ({sentimentEval?.model_version || 'v1.2.0'})
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 shadow-lg backdrop-blur-sm">
             <p className="text-[10px] uppercase font-bold text-slate-400">Accuracy</p>
             <h4 className="mt-1 text-2xl font-bold text-emerald-400">
@@ -197,7 +197,7 @@ export const ModelEvaluationPage: React.FC = () => {
         </h4>
         <p className="text-xs text-slate-400 mb-4">Precision, recall, and Hamming loss across 18 theme classification labels</p>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
           <div className="p-3 bg-slate-950/70 rounded-lg border border-slate-800">
             <span className="text-[10px] uppercase font-bold text-slate-400 block">Hamming Loss</span>
             <span className="text-xl font-bold text-emerald-400 font-mono mt-1 block">

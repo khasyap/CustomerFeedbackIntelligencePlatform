@@ -66,7 +66,7 @@ export const ServicePrioritiesPage: React.FC = () => {
         </div>
 
         {/* Formula display */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-[11px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-[11px]">
           <div className="border-r border-slate-800 pr-2">
             <span className="text-slate-400 block font-medium">35% Weight</span>
             <span className="font-semibold text-rose-400">Negative Sentiment Rate</span>

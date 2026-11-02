@@ -121,7 +121,7 @@ export const OverviewPage: React.FC = () => {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Feedback"
           value={metrics?.total_feedback.toLocaleString() || '0'}

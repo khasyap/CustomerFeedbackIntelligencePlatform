@@ -45,7 +45,7 @@ export const TrendDetectionPage: React.FC = () => {
           <p className="text-xs text-slate-400">Time-series intelligence tracking sudden complaint surges and sentiment inflections</p>
         </div>
 
-        <div className="flex items-center gap-3 text-xs">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
           <select
             value={selectedProduct}
             onChange={(e) => setSelectedProduct(e.target.value)}

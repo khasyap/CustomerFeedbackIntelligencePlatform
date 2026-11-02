@@ -73,8 +73,8 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-      <div className="w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-3 sm:p-4">
+      <div className="w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <div className="rounded-lg bg-indigo-600/20 p-2 text-indigo-400">
@@ -91,7 +91,7 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-3.5 text-xs">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-slate-400 mb-1">Related Theme</label>
               <select
@@ -122,7 +122,7 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-slate-400 mb-1">Priority Level</label>
               <select

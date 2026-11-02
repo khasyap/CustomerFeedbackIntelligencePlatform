@@ -88,7 +88,7 @@ export const DataQualityPage: React.FC = () => {
       </div>
 
       {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 shadow-lg backdrop-blur-sm">
           <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Data Integrity Pass Rate</p>
           <h3 className="mt-1 text-2xl font-bold text-emerald-400">{summary?.pass_rate || 99.9}%</h3>

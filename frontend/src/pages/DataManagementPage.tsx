@@ -184,7 +184,7 @@ export const DataManagementPage: React.FC = () => {
         </div>
 
         {reproducibility?.checksums && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 text-xs">
             {Object.entries(reproducibility.checksums).map(([entity, hash]: any) => (
               <div key={entity} className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">{entity}</span>
@@ -204,7 +204,7 @@ export const DataManagementPage: React.FC = () => {
           Download records directly from flat files (no database required) or stream live database tables.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
           {/* Static Ground Truth CSV */}
           <a
             href="/api/data/download/ground-truth-csv"
@@ -260,7 +260,7 @@ export const DataManagementPage: React.FC = () => {
           </a>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-slate-800/60">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-800/60">
           <a
             href="/api/data/export/csv"
             download="reviews_export.csv"
