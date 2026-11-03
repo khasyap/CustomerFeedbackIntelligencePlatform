@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { OverviewPage } from './pages/OverviewPage';
 import { FeedbackExplorerPage } from './pages/FeedbackExplorerPage';
@@ -102,16 +102,6 @@ export function App() {
               aria-label="Open navigation menu"
             >
               <Menu className="h-5 w-5" />
-            </button>
-
-            {/* Desktop Collapse Toggle */}
-            <button
-              onClick={handleToggleCollapse}
-              className="hidden lg:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition-colors shrink-0"
-              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-label="Toggle sidebar"
-            >
-              {isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </button>
 
             {/* Breadcrumb Navigation */}

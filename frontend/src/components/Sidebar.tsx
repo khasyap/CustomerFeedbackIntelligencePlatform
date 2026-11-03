@@ -75,11 +75,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div>
           {/* Header */}
           {isCollapsed ? (
-            <div className="flex flex-col items-center py-2 mb-3 border-b border-slate-800/80 gap-2.5">
+            <div className="flex flex-col items-center py-2.5 mb-3 border-b border-slate-800/80 gap-2">
               <div
-                className="h-9 w-9 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 cursor-pointer"
-                onClick={onToggleCollapse}
-                title="Expand sidebar"
+                className="h-9 w-9 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20"
+                title="YOTTA INTEL"
               >
                 <BrainCircuit className="h-5 w-5 text-white" />
               </div>
