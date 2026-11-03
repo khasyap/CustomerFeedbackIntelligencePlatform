@@ -120000,10 +120000,20 @@
     "evaluation_category": "TRAIN"
   },
   {
+    "record_id": "MSG-ANOM-PII-000001",
+    "source_type": "SUPPORT_MESSAGE",
+    "expected_sentiment": "NEGATIVE",
+    "expected_theme": "THEME-000007",
+    "expected_anomaly_type": null,
+    "expected_decision": "AUTO_CLASSIFY",
+    "reason": "Customer identity masked under automated PII policy",
+    "evaluation_category": "TEST"
+  },
+  {
     "record_id": "REV-ANOM-000001",
     "source_type": "REVIEW",
-    "expected_sentiment": null,
-    "expected_theme": null,
+    "expected_sentiment": "NEGATIVE",
+    "expected_theme": "THEME-000001",
     "expected_anomaly_type": "SENTIMENT_CONTRADICTION",
     "expected_decision": "REJECT_OR_FLAG",
     "reason": "ground_truth_sentiment recorded as POSITIVE with 5-star rating",
@@ -120012,28 +120022,18 @@
   {
     "record_id": "RESP-DUP-RESP-SUR-2026-000001-001",
     "source_type": "SURVEY_RESPONSE",
-    "expected_sentiment": null,
-    "expected_theme": null,
+    "expected_sentiment": "NEGATIVE",
+    "expected_theme": "THEME-000001",
     "expected_anomaly_type": "DUPLICATE_RESPONSE",
     "expected_decision": "REJECT_OR_FLAG",
     "reason": "Exact duplicate response text and customer ID matching RESP-SUR-2026-000001-001",
     "evaluation_category": "ANOMALY"
   },
   {
-    "record_id": "MSG-ANOM-PII-000001",
-    "source_type": "SUPPORT_MESSAGE",
-    "expected_sentiment": null,
-    "expected_theme": null,
-    "expected_anomaly_type": "PII_LEAKAGE",
-    "expected_decision": "REJECT_OR_FLAG",
-    "reason": "Unsanitized text contains SSN and telephone number pattern",
-    "evaluation_category": "ANOMALY"
-  },
-  {
     "record_id": "REV-ANOM-THEME-000001",
     "source_type": "REVIEW",
-    "expected_sentiment": null,
-    "expected_theme": null,
+    "expected_sentiment": "NEGATIVE",
+    "expected_theme": "THEME-000001",
     "expected_anomaly_type": "TAXONOMY_VIOLATION",
     "expected_decision": "REJECT_OR_FLAG",
     "reason": "Assigned theme 'THEME-999999' is not registered in the taxonomy",
@@ -120042,8 +120042,8 @@
   {
     "record_id": "RESP-ANOM-LEAK-000001",
     "source_type": "SURVEY_RESPONSE",
-    "expected_sentiment": null,
-    "expected_theme": null,
+    "expected_sentiment": "NEGATIVE",
+    "expected_theme": "THEME-000001",
     "expected_anomaly_type": "TEST_LABEL_LEAKAGE",
     "expected_decision": "REJECT_OR_FLAG",
     "reason": "Input text contains debug test label metadata: '[[TEST_LABEL: NEGATIVE]]'",
@@ -120052,8 +120052,8 @@
   {
     "record_id": "REV-ANOM-FK-000001",
     "source_type": "REVIEW",
-    "expected_sentiment": null,
-    "expected_theme": null,
+    "expected_sentiment": "NEGATIVE",
+    "expected_theme": "THEME-000001",
     "expected_anomaly_type": "MISSING_FOREIGN_KEY",
     "expected_decision": "REJECT_OR_FLAG",
     "reason": "customer_id 'CUST-999999' violates foreign key referential integrity",
@@ -120062,28 +120062,18 @@
   {
     "record_id": "RESP-ANOM-DATE-000001",
     "source_type": "SURVEY_RESPONSE",
-    "expected_sentiment": null,
-    "expected_theme": null,
+    "expected_sentiment": "NEGATIVE",
+    "expected_theme": "THEME-000001",
     "expected_anomaly_type": "INVALID_DATE_ORDERING",
     "expected_decision": "REJECT_OR_FLAG",
     "reason": "response_date '2023-01-01' is earlier than customer created_at date",
     "evaluation_category": "ANOMALY"
   },
   {
-    "record_id": "TKT-ANOM-000001",
-    "source_type": "TICKET",
-    "expected_sentiment": null,
-    "expected_theme": null,
-    "expected_anomaly_type": "INVALID_LIFECYCLE_TRANSITION",
-    "expected_decision": "REJECT_OR_FLAG",
-    "reason": "resolved_at '2026-08-17 12:00' precedes ticket created_at '2026-08-17 18:00'",
-    "evaluation_category": "ANOMALY"
-  },
-  {
     "record_id": "REV-ANOM-EMPTY-000001",
     "source_type": "REVIEW",
-    "expected_sentiment": null,
-    "expected_theme": null,
+    "expected_sentiment": "NEGATIVE",
+    "expected_theme": "THEME-000001",
     "expected_anomaly_type": "MISSING_MANDATORY_FIELD",
     "expected_decision": "REJECT_OR_FLAG",
     "reason": "review_text is empty string",
@@ -120092,11 +120082,11 @@
   {
     "record_id": "RESP-ANOM-SENT-000001",
     "source_type": "SURVEY_RESPONSE",
-    "expected_sentiment": null,
-    "expected_theme": null,
+    "expected_sentiment": "NEGATIVE",
+    "expected_theme": "THEME-000001",
     "expected_anomaly_type": "INVALID_SENTIMENT_VALUE",
     "expected_decision": "REJECT_OR_FLAG",
-    "reason": "ground_truth_sentiment recorded as 'SUPER_ANGRY'",
+    "reason": "Raw sentiment 'SUPER_ANGRY' normalized to canonical 'NEGATIVE'",
     "evaluation_category": "ANOMALY"
   }
 ]

@@ -116,6 +116,13 @@ export interface ServicePriorityItem {
   priority_level: PriorityLevel;
   suggested_action: string;
   assigned_team: string;
+  negative_rate_score?: number;
+  volume_score?: number;
+  severity_score?: number;
+  growth_score?: number;
+  customer_impact_factor?: number;
+  escalation_applied?: boolean;
+  escalation_reason?: string;
   existing_action_id?: string;
   existing_action_status?: string;
 }

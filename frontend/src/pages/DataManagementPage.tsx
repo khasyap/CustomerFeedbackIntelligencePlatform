@@ -218,7 +218,7 @@ export const DataManagementPage: React.FC = () => {
               <h4 className="font-semibold text-white mt-1.5 flex items-center gap-1.5">
                 <FileText className="h-3.5 w-3.5 text-indigo-400" /> Ground Truth CSV
               </h4>
-              <p className="text-slate-400 text-[11px] mt-0.5">12,010 partitioned records on disk</p>
+              <p className="text-slate-400 text-[11px] mt-0.5">{offlinePreview?.total_records ? `${offlinePreview.total_records.toLocaleString()} partitioned records on disk` : '12,009 partitioned records on disk'}</p>
             </div>
             <Download className="h-4 w-4 text-indigo-400 group-hover:translate-y-0.5 transition-transform" />
           </a>

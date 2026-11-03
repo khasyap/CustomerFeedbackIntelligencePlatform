@@ -18,6 +18,20 @@ from backend.app.services.trend_detector import TrendDetector
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
+VALID_SENTIMENTS = {"POSITIVE", "NEGATIVE", "NEUTRAL", "MIXED"}
+
+def normalize_sentiment(val: Optional[str]) -> str:
+    if not val:
+        return "NEUTRAL"
+    v = str(val).strip().upper()
+    if v in VALID_SENTIMENTS:
+        return v
+    if "ANGRY" in v or "BAD" in v or "NEG" in v or "POOR" in v or "TERRIBLE" in v or "CRITICAL" in v:
+        return "NEGATIVE"
+    if "GOOD" in v or "POS" in v or "GREAT" in v or "EXCELLENT" in v:
+        return "POSITIVE"
+    return "NEUTRAL"
+
 @router.get("/overview", response_model=OverviewMetrics)
 def get_analytics_overview(
     product_id: Optional[str] = None,
@@ -43,24 +57,20 @@ def get_analytics_overview(
     total_msg = m_q.count()
     total_fb = total_rev + total_surv + total_msg
 
-    # Sentiment distribution
-    sentiments_q = db.query(FeedbackSentiment.predicted_sentiment, func.count(FeedbackSentiment.id)).group_by(FeedbackSentiment.predicted_sentiment).all()
-    sent_dist = {"POSITIVE": 0, "NEGATIVE": 0, "NEUTRAL": 0, "MIXED": 0}
-    for sent, count in sentiments_q:
-        if sent in sent_dist:
-            sent_dist[sent] = count
+    # Fast map of processed sentiments
+    fs_map = {row[0]: row[1] for row in db.query(FeedbackSentiment.feedback_id, FeedbackSentiment.predicted_sentiment).all()}
 
-    # If no processed sentiments yet, derive from ground truth
-    if sum(sent_dist.values()) == 0:
-        for r in r_q.all():
-            st = r.ground_truth_sentiment or "NEUTRAL"
-            sent_dist[st] = sent_dist.get(st, 0) + 1
-        for s in s_q.all():
-            st = s.ground_truth_sentiment or "NEUTRAL"
-            sent_dist[st] = sent_dist.get(st, 0) + 1
-        for m in m_q.all():
-            st = m.ground_truth_sentiment or "NEUTRAL"
-            sent_dist[st] = sent_dist.get(st, 0) + 1
+    # Compute sentiment distribution across ALL records with 100% mathematical consistency
+    sent_dist = {"POSITIVE": 0, "NEGATIVE": 0, "NEUTRAL": 0, "MIXED": 0}
+    for r in r_q.with_entities(Review.review_id, Review.ground_truth_sentiment).all():
+        st = normalize_sentiment(fs_map.get(r[0]) or r[1])
+        sent_dist[st] += 1
+    for s in s_q.with_entities(SurveyResponse.response_id, SurveyResponse.ground_truth_sentiment).all():
+        st = normalize_sentiment(fs_map.get(s[0]) or s[1])
+        sent_dist[st] += 1
+    for m in m_q.with_entities(SupportMessage.message_id, SupportMessage.ground_truth_sentiment).all():
+        st = normalize_sentiment(fs_map.get(m[0]) or m[1])
+        sent_dist[st] += 1
 
     total_classified = max(1, sum(sent_dist.values()))
     sent_pct = {
@@ -114,7 +124,7 @@ def get_sentiment_analytics(
         if not key:
             continue
         results.setdefault(key, {"positive": 0, "negative": 0, "neutral": 0, "mixed": 0, "total": 0})
-        st = (sent or "NEUTRAL").lower()
+        st = normalize_sentiment(sent).lower()
         if st in results[key]:
             results[key][st] += cnt
             results[key]["total"] += cnt
@@ -132,7 +142,25 @@ def get_sentiment_analytics(
         if not key:
             continue
         results.setdefault(key, {"positive": 0, "negative": 0, "neutral": 0, "mixed": 0, "total": 0})
-        st = (sent or "NEUTRAL").lower()
+        st = normalize_sentiment(sent).lower()
+        if st in results[key]:
+            results[key][st] += cnt
+            results[key]["total"] += cnt
+
+    # Fast SQL GROUP BY for Support Messages
+    msg_col = SupportMessage.product_id if group_by == "product" else SupportMessage.channel_id
+    msg_rows = db.query(
+        msg_col,
+        SupportMessage.ground_truth_sentiment,
+        func.count(SupportMessage.message_id)
+    ).group_by(msg_col, SupportMessage.ground_truth_sentiment).all()
+
+    for col_val, sent, cnt in msg_rows:
+        key = products.get(col_val, col_val) if group_by == "product" else channels.get(col_val, col_val)
+        if not key:
+            continue
+        results.setdefault(key, {"positive": 0, "negative": 0, "neutral": 0, "mixed": 0, "total": 0})
+        st = normalize_sentiment(sent).lower()
         if st in results[key]:
             results[key][st] += cnt
             results[key]["total"] += cnt
@@ -202,6 +230,36 @@ def get_theme_analytics(db: Session = Depends(get_db)):
                 theme_sentiments[tid][sent] += cnt
 
     total_fb_themes = max(1, sum(theme_counts.values()))
+
+    # Build authoritative Product and Channel master lookups
+    prods = {p.product_id: p.product_name for p in db.query(Product.product_id, Product.product_name).all()}
+    chans = {c.channel_id: c.channel_name for c in db.query(Channel.channel_id, Channel.channel_name).all()}
+
+    # Aggregate actual problematic products and channels for each theme
+    theme_prod_neg: Dict[str, Dict[str, int]] = {}
+    theme_chan_neg: Dict[str, Dict[str, int]] = {}
+
+    for r in db.query(Review.ground_truth_theme_ids, Review.product_id, Review.channel_id, Review.ground_truth_sentiment).all():
+        if r[0] and r[3] in ["NEGATIVE", "MIXED"]:
+            theme_prod_neg.setdefault(r[0], {}).setdefault(r[1], 0)
+            theme_prod_neg[r[0]][r[1]] += 1
+            theme_chan_neg.setdefault(r[0], {}).setdefault(r[2], 0)
+            theme_chan_neg[r[0]][r[2]] += 1
+
+    for s in db.query(SurveyResponse.ground_truth_theme_ids, SurveyResponse.product_id, SurveyResponse.channel_id, SurveyResponse.ground_truth_sentiment).all():
+        if s[0] and s[3] in ["NEGATIVE", "MIXED"]:
+            theme_prod_neg.setdefault(s[0], {}).setdefault(s[1], 0)
+            theme_prod_neg[s[0]][s[1]] += 1
+            theme_chan_neg.setdefault(s[0], {}).setdefault(s[2], 0)
+            theme_chan_neg[s[0]][s[2]] += 1
+
+    for m in db.query(SupportMessage.ground_truth_theme_ids, SupportMessage.product_id, SupportMessage.channel_id, SupportMessage.ground_truth_sentiment).all():
+        if m[0] and m[3] in ["NEGATIVE", "MIXED"]:
+            theme_prod_neg.setdefault(m[0], {}).setdefault(m[1], 0)
+            theme_prod_neg[m[0]][m[1]] += 1
+            theme_chan_neg.setdefault(m[0], {}).setdefault(m[2], 0)
+            theme_chan_neg[m[0]][m[2]] += 1
+
     items = []
 
     for t in themes:
@@ -209,6 +267,12 @@ def get_theme_analytics(db: Session = Depends(get_db)):
         cnt = theme_counts.get(tid, 0)
         sents = theme_sentiments.get(tid, {"POSITIVE": 0, "NEGATIVE": 0, "NEUTRAL": 0, "MIXED": 0})
         neg_rate = round((sents["NEGATIVE"] / max(1, cnt)) * 100.0, 1)
+
+        top_pids = sorted(theme_prod_neg.get(tid, {}).items(), key=lambda x: x[1], reverse=True)[:2]
+        prob_prods = [prods.get(p[0], p[0]) for p in top_pids if p[0] in prods] or (list(prods.values())[:1] if prods else ["General Product"])
+
+        top_chids = sorted(theme_chan_neg.get(tid, {}).items(), key=lambda x: x[1], reverse=True)[:2]
+        prob_chans = [chans.get(c[0], c[0]) for c in top_chids if c[0] in chans] or (list(chans.values())[:1] if chans else ["Website"])
 
         items.append(ThemeMetricItem(
             theme_id=tid,
@@ -222,8 +286,8 @@ def get_theme_analytics(db: Session = Depends(get_db)):
             negative_rate=neg_rate,
             severity=t.default_severity,
             is_emerging=tid in ["THEME-000005", "THEME-000017"],
-            problematic_products=["Smart Home Hub X", "Enterprise CRM Suite"] if neg_rate > 20 else ["Cloud Storage Ultra"],
-            problematic_channels=["Mobile Application", "Live Chat"] if neg_rate > 20 else ["Website"]
+            problematic_products=prob_prods,
+            problematic_channels=prob_chans
         ))
 
     items.sort(key=lambda x: x.count, reverse=True)
@@ -236,40 +300,60 @@ def get_sentiment_trends(
     days: int = Query(90, ge=7, le=365),
     db: Session = Depends(get_db)
 ):
-    """Generates chronological time-series sentiment trends."""
-    # Find latest feedback date to anchor
-    latest_date = db.query(func.max(Review.review_date)).scalar() or datetime.utcnow()
+    """Generates chronological time-series sentiment trends strictly bounded by date window."""
+    # Find latest feedback date across all sources
+    max_rev = db.query(func.max(Review.review_date)).scalar()
+    max_surv = db.query(func.max(SurveyResponse.response_date)).scalar()
+    max_msg = db.query(func.max(SupportMessage.message_date)).scalar()
+    valid_dates = [d for d in [max_rev, max_surv, max_msg] if d is not None]
+    latest_date = max(valid_dates) if valid_dates else datetime.utcnow()
     start_date = latest_date - timedelta(days=days)
 
-    # Gather reviews and surveys
-    r_q = db.query(Review.review_date, Review.ground_truth_sentiment).filter(Review.review_date >= start_date)
-    s_q = db.query(SurveyResponse.response_date, SurveyResponse.ground_truth_sentiment).filter(SurveyResponse.response_date >= start_date)
+    # Strictly bounded by start_date and latest_date
+    r_q = db.query(Review.review_date, Review.ground_truth_sentiment).filter(
+        Review.review_date >= start_date,
+        Review.review_date <= latest_date
+    )
+    s_q = db.query(SurveyResponse.response_date, SurveyResponse.ground_truth_sentiment).filter(
+        SurveyResponse.response_date >= start_date,
+        SurveyResponse.response_date <= latest_date
+    )
+    m_q = db.query(SupportMessage.message_date, SupportMessage.ground_truth_sentiment).filter(
+        SupportMessage.message_date >= start_date,
+        SupportMessage.message_date <= latest_date
+    )
 
     if product_id:
         r_q = r_q.filter(Review.product_id == product_id)
         s_q = s_q.filter(SurveyResponse.product_id == product_id)
+        m_q = m_q.filter(SupportMessage.product_id == product_id)
     if channel_id:
         r_q = r_q.filter(Review.channel_id == channel_id)
         s_q = s_q.filter(SurveyResponse.channel_id == channel_id)
+        m_q = m_q.filter(SupportMessage.channel_id == channel_id)
 
-    # Group by week or month for smooth curves
     time_buckets: Dict[str, Dict[str, int]] = {}
 
     for dt, sent in r_q.all():
         b_key = dt.strftime("%Y-%m-%d")
         time_buckets.setdefault(b_key, {"POSITIVE": 0, "NEGATIVE": 0, "NEUTRAL": 0, "MIXED": 0, "total": 0})
-        st = sent or "NEUTRAL"
-        if st in time_buckets[b_key]:
-            time_buckets[b_key][st] += 1
-            time_buckets[b_key]["total"] += 1
+        st = normalize_sentiment(sent)
+        time_buckets[b_key][st] += 1
+        time_buckets[b_key]["total"] += 1
 
     for dt, sent in s_q.all():
         b_key = dt.strftime("%Y-%m-%d")
         time_buckets.setdefault(b_key, {"POSITIVE": 0, "NEGATIVE": 0, "NEUTRAL": 0, "MIXED": 0, "total": 0})
-        st = sent or "NEUTRAL"
-        if st in time_buckets[b_key]:
-            time_buckets[b_key][st] += 1
-            time_buckets[b_key]["total"] += 1
+        st = normalize_sentiment(sent)
+        time_buckets[b_key][st] += 1
+        time_buckets[b_key]["total"] += 1
+
+    for dt, sent in m_q.all():
+        b_key = dt.strftime("%Y-%m-%d")
+        time_buckets.setdefault(b_key, {"POSITIVE": 0, "NEGATIVE": 0, "NEUTRAL": 0, "MIXED": 0, "total": 0})
+        st = normalize_sentiment(sent)
+        time_buckets[b_key][st] += 1
+        time_buckets[b_key]["total"] += 1
 
     points = []
     for b_key in sorted(time_buckets.keys()):

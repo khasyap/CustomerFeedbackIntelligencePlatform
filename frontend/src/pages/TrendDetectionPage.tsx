@@ -36,6 +36,23 @@ export const TrendDetectionPage: React.FC = () => {
     fetchData();
   }, [selectedProduct, days]);
 
+  // Baseline vs Current Period Calculations (First half vs Second half of selected window)
+  const midpoint = Math.floor(trends.length / 2);
+  const baselineSlice = trends.slice(0, midpoint);
+  const currentSlice = trends.slice(midpoint);
+
+  const baselineTotal = baselineSlice.reduce((acc, t) => acc + t.total, 0);
+  const baselineNeg = baselineSlice.reduce((acc, t) => acc + t.negative, 0);
+  const baselineRate = baselineTotal > 0 ? (baselineNeg / baselineTotal) * 100 : 0;
+
+  const currentTotal = currentSlice.reduce((acc, t) => acc + t.total, 0);
+  const currentNeg = currentSlice.reduce((acc, t) => acc + t.negative, 0);
+  const currentRate = currentTotal > 0 ? (currentNeg / currentTotal) * 100 : 0;
+
+  const totalFilteredVolume = trends.reduce((acc, t) => acc + t.total, 0);
+  const ppChange = currentRate - baselineRate;
+  const relChange = baselineRate > 0 ? ((currentRate - baselineRate) / baselineRate) * 100 : 0;
+
   return (
     <div className="space-y-6">
       {/* Header Bar */}
@@ -77,6 +94,54 @@ export const TrendDetectionPage: React.FC = () => {
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
+        </div>
+      </div>
+
+      {/* Date Window & Trend Metrics Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-sm">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block">Filtered Date Window</span>
+          <span className="text-sm font-bold text-white mt-1 block">
+            {trends.length > 0 ? `${trends[0].date} → ${trends[trends.length - 1].date}` : `${days} Days Range`}
+          </span>
+          <span className="text-[11px] text-indigo-300 mt-0.5 block font-mono">
+            {totalFilteredVolume.toLocaleString()} feedback items
+          </span>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-sm">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block">Baseline Dissatisfaction</span>
+          <span className="text-xl font-bold text-slate-200 mt-1 block">
+            {baselineRate.toFixed(1)}%
+          </span>
+          <span className="text-[11px] text-slate-400 mt-0.5 block">
+            Baseline period (first {midpoint} days)
+          </span>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-sm">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block">Current Dissatisfaction</span>
+          <span className={`text-xl font-bold mt-1 block ${currentRate > baselineRate ? 'text-rose-400' : 'text-emerald-400'}`}>
+            {currentRate.toFixed(1)}%
+          </span>
+          <span className="text-[11px] text-slate-400 mt-0.5 block">
+            Current period (recent {trends.length - midpoint} days)
+          </span>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-sm">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block">Trend Delta (PP vs Relative)</span>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className={`text-xl font-bold ${ppChange > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+              {ppChange >= 0 ? '+' : ''}{ppChange.toFixed(1)} pp
+            </span>
+            <span className={`text-xs font-semibold ${relChange > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+              ({relChange >= 0 ? '+' : ''}{relChange.toFixed(1)}% rel)
+            </span>
+          </div>
+          <span className="text-[11px] text-slate-400 mt-0.5 block">
+            Percentage-point vs Relative increase
+          </span>
         </div>
       </div>
 

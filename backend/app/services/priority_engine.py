@@ -229,17 +229,35 @@ class PriorityEngine:
                 volume_score = min(100.0, (vol / max(1, max_vol)) * 100.0)
                 customer_impact_score = 75.0 # Average enterprise/mid-market weight
 
-                # Compute weighted formula
-                priority_score = (
-                    settings.WEIGHT_NEGATIVE_RATE * (neg_rate * 100.0) +
-                    settings.WEIGHT_VOLUME * volume_score +
-                    settings.WEIGHT_SEVERITY * severity_score +
-                    settings.WEIGHT_GROWTH_RATE * growth_score +
-                    settings.WEIGHT_CUSTOMER_IMPACT * customer_impact_score
-                )
-                priority_score = round(min(100.0, max(0.0, priority_score)), 1)
+                # Compute individual factor scores (0-100 normalized)
+                neg_rate_score = round(neg_rate * 100.0, 1)
+                vol_score = round(volume_score, 1)
+                sev_score = round(severity_score, 1)
+                grow_score = round(growth_score, 1)
+                cust_impact = round(customer_impact_score, 1)
 
-                # Determine Priority Level
+                raw_priority_score = (
+                    settings.WEIGHT_NEGATIVE_RATE * neg_rate_score +
+                    settings.WEIGHT_VOLUME * vol_score +
+                    settings.WEIGHT_SEVERITY * sev_score +
+                    settings.WEIGHT_GROWTH_RATE * grow_score +
+                    settings.WEIGHT_CUSTOMER_IMPACT * cust_impact
+                )
+                raw_priority_score = round(min(100.0, max(0.0, raw_priority_score)), 1)
+
+                # Escalation Rule for Critical Severity:
+                # If an issue carries inherent CRITICAL severity with non-trivial customer friction (neg_rate >= 20% or vol >= 30),
+                # escalate priority floor to at least HIGH (75.0) to eliminate Critical-severity / Medium-priority disconnects.
+                escalation_applied = False
+                escalation_reason = None
+                if theme.default_severity == "CRITICAL" and (neg_rate >= 0.20 or vol >= 30):
+                    escalation_applied = True
+                    escalation_reason = "Escalated: Defect carries inherent CRITICAL severity with elevated customer friction"
+                    priority_score = max(raw_priority_score, 75.0)
+                else:
+                    priority_score = raw_priority_score
+
+                # Determine Priority Level based on final score
                 if priority_score >= 85:
                     level = "CRITICAL"
                 elif priority_score >= 70:
@@ -262,6 +280,13 @@ class PriorityEngine:
                     "severity": theme.default_severity,
                     "recent_growth_rate": round(growth_rate * 100.0, 1),
                     "customer_impact_score": customer_impact_score,
+                    "negative_rate_score": neg_rate_score,
+                    "volume_score": vol_score,
+                    "severity_score": sev_score,
+                    "growth_score": grow_score,
+                    "customer_impact_factor": cust_impact,
+                    "escalation_applied": escalation_applied,
+                    "escalation_reason": escalation_reason,
                     "priority_score": priority_score,
                     "priority_level": level,
                     "suggested_action": playbook["action"],

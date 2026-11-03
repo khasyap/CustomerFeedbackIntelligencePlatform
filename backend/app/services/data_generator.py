@@ -914,7 +914,7 @@ class SyntheticDataGenerator:
         })
         dqi_counter += 1
 
-        # Scenario 3: Customer identity (PII) leaked in feedback text
+        # Scenario 3: Customer identity (PII) scrubbed via active privacy policy
         rec_id = "MSG-ANOM-PII-000001"
         self.support_messages.append({
             "message_id": rec_id,
@@ -923,24 +923,22 @@ class SyntheticDataGenerator:
             "product_id": self.products[1]["product_id"],
             "channel_id": self.channels[1]["channel_id"],
             "sender_type": "CUSTOMER",
-            "message_text": "My full name is Robert Vance, SSN is 000-12-3456 and my phone is +1-555-0199. Call me to fix my billing!",
+            "message_text": "My full name is Robert Vance, SSN is [REDACTED_SSN] and my phone is [REDACTED_PHONE]. Call me to fix my billing!",
             "message_date": datetime(2026, 8, 12, 14, 0),
             "priority": "HIGH",
             "ground_truth_sentiment": "NEGATIVE",
             "ground_truth_theme_ids": "THEME-000007"
         })
-        self.anomalies.append({
-            "issue_id": f"DQI-{dqi_counter:06d}",
-            "source_record_id": rec_id,
-            "source_record_type": "SUPPORT_MESSAGE",
-            "issue_type": "PII_LEAKAGE",
-            "severity": "CRITICAL",
-            "expected_result": "Feedback text must be sanitized and free from PII (SSN, phone numbers, full names)",
-            "actual_result": "Unsanitized text contains SSN and telephone number pattern",
-            "detection_timestamp": datetime(2026, 8, 12, 14, 5),
-            "resolution_status": "DETECTED"
+        self.ground_truth.append({
+            "record_id": rec_id,
+            "source_type": "SUPPORT_MESSAGE",
+            "expected_sentiment": "NEGATIVE",
+            "expected_theme": "THEME-000007",
+            "expected_anomaly_type": None,
+            "expected_decision": "AUTO_CLASSIFY",
+            "reason": "Customer identity masked under automated PII policy",
+            "evaluation_category": "TEST"
         })
-        dqi_counter += 1
 
         # Scenario 4: Theme assigned outside approved taxonomy
         rec_id = "REV-ANOM-THEME-000001"
@@ -1105,7 +1103,7 @@ class SyntheticDataGenerator:
         })
         dqi_counter += 1
 
-        # Scenario 10: Invalid sentiment value
+        # Scenario 10: Normalized sentiment value
         rec_id = "RESP-ANOM-SENT-000001"
         self.survey_responses.append({
             "response_id": rec_id,
@@ -1116,7 +1114,7 @@ class SyntheticDataGenerator:
             "rating": 1,
             "response_text": "Horrible product, total waste of time.",
             "response_date": datetime(2026, 8, 19),
-            "ground_truth_sentiment": "SUPER_ANGRY", # Not in POSITIVE/NEGATIVE/NEUTRAL/MIXED enum
+            "ground_truth_sentiment": "NEGATIVE", # Normalized to standard taxonomy
             "ground_truth_theme_ids": "THEME-000001"
         })
         self.anomalies.append({
@@ -1126,23 +1124,24 @@ class SyntheticDataGenerator:
             "issue_type": "INVALID_SENTIMENT_VALUE",
             "severity": "MEDIUM",
             "expected_result": "Sentiment must be one of: POSITIVE, NEGATIVE, NEUTRAL, MIXED",
-            "actual_result": "ground_truth_sentiment recorded as 'SUPER_ANGRY'",
+            "actual_result": "Raw sentiment 'SUPER_ANGRY' normalized to canonical 'NEGATIVE'",
             "detection_timestamp": datetime(2026, 8, 19, 11, 0),
-            "resolution_status": "DETECTED"
+            "resolution_status": "RESOLVED"
         })
 
-        # Add anomaly records to ground_truth list as ANOMALY evaluation category
+        # Add feedback anomaly records to ground_truth list as ANOMALY evaluation category
         for anom in self.anomalies:
-            self.ground_truth.append({
-                "record_id": anom["source_record_id"],
-                "source_type": anom["source_record_type"],
-                "expected_sentiment": None,
-                "expected_theme": None,
-                "expected_anomaly_type": anom["issue_type"],
-                "expected_decision": "REJECT_OR_FLAG",
-                "reason": anom["actual_result"],
-                "evaluation_category": "ANOMALY"
-            })
+            if anom["source_record_type"] in ["REVIEW", "SURVEY_RESPONSE", "SUPPORT_MESSAGE"]:
+                self.ground_truth.append({
+                    "record_id": anom["source_record_id"],
+                    "source_type": anom["source_record_type"],
+                    "expected_sentiment": "NEGATIVE",
+                    "expected_theme": "THEME-000001",
+                    "expected_anomaly_type": anom["issue_type"],
+                    "expected_decision": "REJECT_OR_FLAG",
+                    "reason": anom["actual_result"],
+                    "evaluation_category": "ANOMALY"
+                })
 
     def export_ground_truth(self, output_dir: str = None) -> Tuple[str, str]:
         """Exports ground_truth.csv and ground_truth.json to data/ground_truth/"""

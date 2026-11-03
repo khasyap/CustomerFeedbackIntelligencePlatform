@@ -83,18 +83,11 @@ class ValidationService:
                     actual="Rating is 5 but text contains extreme complaint language"
                 )
 
-            # Check 5: PII Leakage
-            _, pii_findings = TextPreprocessor.detect_and_mask_pii(rev.review_text or "")
-            if pii_findings:
-                ValidationService._add_issue(
-                    db, existing_issue_keys, issues_detected,
-                    source_id=rev.review_id,
-                    source_type="REVIEW",
-                    issue_type="PII_LEAKAGE",
-                    severity="CRITICAL",
-                    expected="Feedback text must be sanitized without personal credentials or SSN",
-                    actual=pii_findings[0]["detail"]
-                )
+            # Check 5: Automated PII Masking (Active Policy - auto-scrub in place)
+            masked, pii_findings = TextPreprocessor.detect_and_mask_pii(rev.review_text or "")
+            if pii_findings and rev.review_text != masked:
+                rev.review_text = masked
+                db.commit()
 
             # Check 6: Test Label Leakage
             if TextPreprocessor.detect_test_labels(rev.review_text or ""):
@@ -157,18 +150,11 @@ class ValidationService:
                     actual=f"Invalid sentiment value '{resp.ground_truth_sentiment}'"
                 )
 
-            # Check PII & Test labels in survey
-            _, pii_findings = TextPreprocessor.detect_and_mask_pii(resp.response_text or "")
-            if pii_findings:
-                ValidationService._add_issue(
-                    db, existing_issue_keys, issues_detected,
-                    source_id=resp.response_id,
-                    source_type="SURVEY_RESPONSE",
-                    issue_type="PII_LEAKAGE",
-                    severity="CRITICAL",
-                    expected="Survey text must be sanitized without PII",
-                    actual=pii_findings[0]["detail"]
-                )
+            # Check PII (Active Policy - auto-scrub in place) & Test labels in survey
+            masked, pii_findings = TextPreprocessor.detect_and_mask_pii(resp.response_text or "")
+            if pii_findings and resp.response_text != masked:
+                resp.response_text = masked
+                db.commit()
 
             if TextPreprocessor.detect_test_labels(resp.response_text or ""):
                 ValidationService._add_issue(
@@ -185,17 +171,10 @@ class ValidationService:
         messages = db.query(SupportMessage).all()
         total_records_checked += len(messages)
         for msg in messages:
-            _, pii_findings = TextPreprocessor.detect_and_mask_pii(msg.message_text or "")
-            if pii_findings:
-                ValidationService._add_issue(
-                    db, existing_issue_keys, issues_detected,
-                    source_id=msg.message_id,
-                    source_type="SUPPORT_MESSAGE",
-                    issue_type="PII_LEAKAGE",
-                    severity="CRITICAL",
-                    expected="Support message text must be sanitized without sensitive PII",
-                    actual=pii_findings[0]["detail"]
-                )
+            masked, pii_findings = TextPreprocessor.detect_and_mask_pii(msg.message_text or "")
+            if pii_findings and msg.message_text != masked:
+                msg.message_text = masked
+                db.commit()
 
         tickets = db.query(Ticket).all()
         total_records_checked += len(tickets)

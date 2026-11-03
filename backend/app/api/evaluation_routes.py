@@ -1,10 +1,13 @@
+import os
 import json
+import pandas as pd
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from backend.app.config import settings
 from backend.app.database import get_db
-from backend.app.models.entities import ModelEvaluation, Review, SurveyResponse
+from backend.app.models.entities import ModelEvaluation, Review, SurveyResponse, SupportMessage
 from backend.app.schemas.quality import EvaluationMetricsOut
 from backend.app.ml.sentiment_classifier import SentimentClassifier
 from backend.app.ml.theme_classifier import ThemeClassifier
@@ -31,15 +34,37 @@ def run_model_evaluation(
     Executes rigorous evaluation on the designated test split without label leakage.
     Calculates accuracy, macro F1, micro F1, confusion matrix, and throughput.
     """
-    # Collect test samples from reviews
+    csv_path = os.path.join(settings.DATA_DIR, "ground_truth", "ground_truth.csv")
     samples = []
-    for r in db.query(Review).limit(1000).all():
-        if r.ground_truth_sentiment and r.review_text:
-            samples.append({
-                "text": f"{r.title + ': ' if r.title else ''}{r.review_text}",
-                "expected_sentiment": r.ground_truth_sentiment,
-                "expected_theme": r.ground_truth_theme_ids
-            })
+
+    # Fast text dictionary lookup across all source records
+    rev_texts = {r.review_id: f"{r.title + ': ' if r.title else ''}{r.review_text}" for r in db.query(Review.review_id, Review.title, Review.review_text).all()}
+    surv_texts = {s.response_id: s.response_text for s in db.query(SurveyResponse.response_id, SurveyResponse.response_text).all()}
+    msg_texts = {m.message_id: m.message_text for m in db.query(SupportMessage.message_id, SupportMessage.message_text).all()}
+    all_texts = {**rev_texts, **surv_texts, **msg_texts}
+
+    if os.path.exists(csv_path):
+        df = pd.read_csv(csv_path)
+        split_df = df[df["evaluation_category"] == dataset]
+        for _, row in split_df.iterrows():
+            rid = row["record_id"]
+            text = all_texts.get(rid)
+            if text and text.strip():
+                samples.append({
+                    "text": text,
+                    "expected_sentiment": row["expected_sentiment"],
+                    "expected_theme": row["expected_theme"]
+                })
+
+    # Fallback to database queries if ground truth CSV is unavailable
+    if not samples:
+        for r in db.query(Review).limit(1000).all():
+            if r.ground_truth_sentiment and r.review_text:
+                samples.append({
+                    "text": f"{r.title + ': ' if r.title else ''}{r.review_text}",
+                    "expected_sentiment": r.ground_truth_sentiment,
+                    "expected_theme": r.ground_truth_theme_ids
+                })
 
     sentiment_clf = SentimentClassifier()
     theme_clf = ThemeClassifier()

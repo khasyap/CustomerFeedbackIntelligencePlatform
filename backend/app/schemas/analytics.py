@@ -80,6 +80,13 @@ class ServicePriorityItem(BaseModel):
     priority_level: str
     suggested_action: str
     assigned_team: str
+    negative_rate_score: Optional[float] = None
+    volume_score: Optional[float] = None
+    severity_score: Optional[float] = None
+    growth_score: Optional[float] = None
+    customer_impact_factor: Optional[float] = None
+    escalation_applied: Optional[bool] = False
+    escalation_reason: Optional[str] = None
     existing_action_id: Optional[str] = None
     existing_action_status: Optional[str] = None
 

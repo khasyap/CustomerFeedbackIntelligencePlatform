@@ -76,7 +76,7 @@ def get_unified_feedback(
             s_pat = f"%{search}%"
             r_query = r_query.filter(or_(Review.review_text.ilike(s_pat), Review.title.ilike(s_pat), Review.review_id.ilike(s_pat)))
         
-        for r in r_query.limit(400).all():
+        for r in r_query.all():
             items.append({
                 "feedback_id": r[0],
                 "feedback_type": "REVIEW",
@@ -105,7 +105,7 @@ def get_unified_feedback(
             s_pat = f"%{search}%"
             s_query = s_query.filter(or_(SurveyResponse.response_text.ilike(s_pat), SurveyResponse.response_id.ilike(s_pat)))
 
-        for s in s_query.limit(400).all():
+        for s in s_query.all():
             items.append({
                 "feedback_id": s[0],
                 "feedback_type": "SURVEY_RESPONSE",
@@ -134,7 +134,7 @@ def get_unified_feedback(
             s_pat = f"%{search}%"
             m_query = m_query.filter(or_(SupportMessage.message_text.ilike(s_pat), SupportMessage.message_id.ilike(s_pat)))
 
-        for m in m_query.limit(200).all():
+        for m in m_query.all():
             items.append({
                 "feedback_id": m[0],
                 "feedback_type": "SUPPORT_MESSAGE",
@@ -148,17 +148,54 @@ def get_unified_feedback(
                 "ground_truth_themes": m[7]
             })
 
-    # Enrich with predicted sentiment and themes
-    enriched_items = []
+    def norm_sent(val: Optional[str]) -> str:
+        if not val:
+            return "NEUTRAL"
+        v = str(val).strip().upper()
+        if v in {"POSITIVE", "NEGATIVE", "NEUTRAL", "MIXED"}:
+            return v
+        if "ANGRY" in v or "BAD" in v or "NEG" in v or "POOR" in v:
+            return "NEGATIVE"
+        if "GOOD" in v or "POS" in v:
+            return "POSITIVE"
+        return "NEUTRAL"
+
+    # Filter items before heavy pydantic serialization
+    filtered_items = []
     for it in items:
         fid = it["feedback_id"]
         sent_obj = sentiments.get(fid)
         th_list = fb_themes.get(fid, [])
 
-        pred_sent = sent_obj[1] if sent_obj else it.get("ground_truth_sentiment", "NEUTRAL")
+        pred_sent = sent_obj[1] if sent_obj else norm_sent(it.get("ground_truth_sentiment"))
+        rev_stat = sent_obj[4] if sent_obj else "AUTO_CLASSIFIED"
+
+        if sentiment and pred_sent != sentiment:
+            continue
+
+        if theme_id:
+            has_theme = any(t[1] == theme_id for t in th_list) or (it.get("ground_truth_themes") == theme_id)
+            if not has_theme:
+                continue
+
+        if review_status and rev_stat != review_status:
+            continue
+
+        filtered_items.append((it, sent_obj, th_list, pred_sent, rev_stat))
+
+    # Sort descending by date
+    filtered_items.sort(key=lambda x: x[0]["date"], reverse=True)
+
+    total_count = len(filtered_items)
+    start_idx = (page - 1) * page_size
+    paged_slice = filtered_items[start_idx: start_idx + page_size]
+
+    # Enrich ONLY the sliced page items for sub-millisecond response times
+    enriched_page = []
+    for it, sent_obj, th_list, pred_sent, rev_stat in paged_slice:
+        fid = it["feedback_id"]
         conf = sent_obj[2] if sent_obj else 0.85
         expl = sent_obj[3] if sent_obj else "Direct inference"
-        rev_stat = sent_obj[4] if sent_obj else "AUTO_CLASSIFIED"
 
         th_names = [themes[t[1]].theme_name for t in th_list if t[1] in themes]
         if not th_names and it.get("ground_truth_themes"):
@@ -168,25 +205,11 @@ def get_unified_feedback(
 
         th_confs = [t[2] for t in th_list]
 
-        # Apply sentiment filter
-        if sentiment and pred_sent != sentiment:
-            continue
-
-        # Apply theme filter
-        if theme_id:
-            has_theme = any(t.theme_id == theme_id for t in th_list) or (it.get("ground_truth_themes") == theme_id)
-            if not has_theme:
-                continue
-
-        # Apply review_status filter
-        if review_status and rev_stat != review_status:
-            continue
-
         cust = customers.get(it["customer_id"])
         prod = products.get(it["product_id"])
         chan = channels.get(it["channel_id"])
 
-        enriched_items.append(FeedbackItemOut(
+        enriched_page.append(FeedbackItemOut(
             feedback_id=fid,
             feedback_type=it["feedback_type"],
             customer_id=it["customer_id"],
@@ -212,15 +235,8 @@ def get_unified_feedback(
             ground_truth_themes=it.get("ground_truth_themes")
         ))
 
-    # Sort descending by date
-    enriched_items.sort(key=lambda x: x.date, reverse=True)
-
-    total_count = len(enriched_items)
-    start_idx = (page - 1) * page_size
-    paged_items = enriched_items[start_idx: start_idx + page_size]
-
     return {
-        "items": paged_items,
+        "items": enriched_page,
         "total": total_count,
         "page": page,
         "page_size": page_size,

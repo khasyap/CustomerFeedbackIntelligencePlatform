@@ -125,7 +125,7 @@ export const OverviewPage: React.FC = () => {
         <StatCard
           title="Total Feedback"
           value={metrics?.total_feedback.toLocaleString() || '0'}
-          subtitle={`Reviews: ${metrics?.total_reviews.toLocaleString()} | Surveys: ${metrics?.total_surveys.toLocaleString()}`}
+          subtitle={`Reviews: ${metrics?.total_reviews.toLocaleString()} | Surveys: ${metrics?.total_surveys.toLocaleString()} | Messages: ${metrics?.total_support_messages.toLocaleString()}`}
           icon={<MessageSquare className="h-5 w-5" />}
           trend="+12%"
           trendType="positive"
